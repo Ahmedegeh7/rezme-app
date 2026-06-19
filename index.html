@@ -1,0 +1,1627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Rezme is the AI Chrome extension that autofills any job application in one click. Works on Greenhouse, Lever, Workday, Ashby, and 50+ ATS platforms." />
+  <meta name="theme-color" content="#08080D" />
+  <title>Rezme — AI job autofill for every ATS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #08080D;
+      --bg1:       #0F0F17;
+      --bg2:       #141420;
+      --bg3:       #1A1A2A;
+      --border:    rgba(255,255,255,0.07);
+      --border2:   rgba(255,255,255,0.12);
+      --text:      #F0F0FA;
+      --muted:     #8888AA;
+      --muted2:    #5A5A7A;
+      --accent:    #6C63FF;
+      --accent2:   #9B94FF;
+      --accent3:   #4ECDC4;
+      --green:     #22C55E;
+      --red:       #EF4444;
+      --yellow:    #F59E0B;
+      --radius:    12px;
+      --radius2:   20px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    img { max-width: 100%; }
+
+    /* ─── NAV ─────────────────────────────────────── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 40px; height: 64px;
+      background: rgba(8,8,13,0.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 20px; font-weight: 800; letter-spacing: -0.5px;
+    }
+    .nav-logo-icon {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, var(--accent), var(--accent3));
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+    }
+    .nav-links { display: flex; align-items: center; gap: 32px; }
+    .nav-links a { font-size: 14px; color: var(--muted); font-weight: 500; transition: color .15s; }
+    .nav-links a:hover { color: var(--text); }
+    .nav-actions { display: flex; align-items: center; gap: 12px; }
+    .btn-ghost { font-size: 14px; color: var(--muted); font-weight: 500; padding: 8px 16px; border-radius: 8px; transition: color .15s; }
+    .btn-ghost:hover { color: var(--text); }
+    .btn-primary {
+      font-size: 14px; font-weight: 600; padding: 9px 18px;
+      background: var(--accent); color: #fff; border-radius: 8px;
+      transition: opacity .15s, transform .15s;
+      display: flex; align-items: center; gap: 6px;
+      border: none; cursor: pointer;
+    }
+    .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+    .chrome-icon { width: 16px; height: 16px; opacity: 0.9; }
+
+    /* ─── HERO ────────────────────────────────────── */
+    .hero {
+      min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center;
+      padding: 120px 24px 80px;
+      position: relative; overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; top: -200px; left: 50%; transform: translateX(-50%);
+      width: 800px; height: 800px;
+      background: radial-gradient(circle, rgba(108,99,255,0.15) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(108,99,255,0.12); border: 1px solid rgba(108,99,255,0.3);
+      border-radius: 100px; padding: 6px 14px;
+      font-size: 13px; font-weight: 500; color: var(--accent2);
+      margin-bottom: 32px;
+    }
+    .hero-badge-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent3); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.4} }
+
+    .hero h1 {
+      font-size: clamp(44px, 6.5vw, 80px);
+      font-weight: 900; letter-spacing: -2.5px;
+      line-height: 1.05;
+      max-width: 900px;
+      margin-bottom: 8px;
+    }
+    .hero h1 .static { color: var(--text); }
+    .hero h1 .rotating-wrap {
+      display: inline-block; position: relative;
+      height: 1.1em; overflow: hidden; vertical-align: bottom;
+    }
+    .rotating-text {
+      display: flex; flex-direction: column;
+      animation: rotateWords 8s infinite;
+    }
+    .rotating-text span {
+      height: 1.1em; display: flex; align-items: center;
+      background: linear-gradient(135deg, var(--accent), var(--accent3));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    @keyframes rotateWords {
+      0%,18%  { transform: translateY(0); }
+      22%,38% { transform: translateY(-1.1em); }
+      42%,58% { transform: translateY(-2.2em); }
+      62%,78% { transform: translateY(-3.3em); }
+      82%,100%{ transform: translateY(-4.4em); }
+    }
+    .hero-sub {
+      font-size: 18px; color: var(--muted); max-width: 560px; margin: 24px auto 40px;
+      line-height: 1.7; font-weight: 400;
+    }
+    .hero-ctas { display: flex; align-items: center; gap: 16px; justify-content: center; flex-wrap: wrap; }
+    .btn-hero {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 16px; font-weight: 700; padding: 14px 28px;
+      background: var(--accent); color: #fff;
+      border-radius: 10px; transition: all .2s;
+      border: none; cursor: pointer;
+    }
+    .btn-hero:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(108,99,255,0.4); }
+    .btn-hero-outline {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 15px; font-weight: 600; padding: 13px 24px;
+      background: transparent; color: var(--text);
+      border: 1px solid var(--border2); border-radius: 10px; transition: all .2s;
+    }
+    .btn-hero-outline:hover { background: var(--bg2); border-color: rgba(255,255,255,0.2); }
+    .hero-rating {
+      margin-top: 48px; display: flex; align-items: center; gap: 12px;
+      font-size: 13px; color: var(--muted);
+    }
+    .stars { color: #F59E0B; letter-spacing: 2px; }
+
+    /* ─── ATS TICKER ──────────────────────────────── */
+    .ats-strip {
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 0;
+      overflow: hidden; background: var(--bg1);
+    }
+    .ats-ticker {
+      display: flex; gap: 0; width: max-content;
+      animation: ticker 28s linear infinite;
+    }
+    .ats-ticker:hover { animation-play-state: paused; }
+    @keyframes ticker { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+    .ats-item {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 0 32px; font-size: 13px; font-weight: 600;
+      color: var(--muted2); white-space: nowrap; letter-spacing: 0.3px;
+    }
+    .ats-item span { color: var(--accent3); font-size: 10px; }
+
+    /* ─── SECTION SHARED ──────────────────────────── */
+    section { padding: 100px 24px; }
+    .container { max-width: 1100px; margin: 0 auto; }
+    .section-label {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+      color: var(--accent2); margin-bottom: 16px;
+    }
+    .section-label::before { content: ''; width: 20px; height: 1px; background: var(--accent2); }
+    h2 {
+      font-size: clamp(32px, 4vw, 52px);
+      font-weight: 800; letter-spacing: -1.5px; line-height: 1.1;
+      margin-bottom: 16px;
+    }
+    .section-sub { font-size: 17px; color: var(--muted); max-width: 560px; line-height: 1.7; }
+
+    /* ─── DEMO CARD ───────────────────────────────── */
+    .demo-section { background: var(--bg1); }
+    .demo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; }
+    .demo-card {
+      background: var(--bg2); border: 1px solid var(--border2);
+      border-radius: var(--radius2); overflow: hidden;
+      box-shadow: 0 40px 80px rgba(0,0,0,0.5);
+    }
+    .demo-card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px; border-bottom: 1px solid var(--border);
+    }
+    .demo-card-dots { display: flex; gap: 6px; }
+    .demo-card-dots span {
+      width: 10px; height: 10px; border-radius: 50%;
+    }
+    .demo-card-dots span:nth-child(1) { background: #EF4444; }
+    .demo-card-dots span:nth-child(2) { background: #F59E0B; }
+    .demo-card-dots span:nth-child(3) { background: #22C55E; }
+    .demo-card-title { font-size: 13px; color: var(--muted); font-weight: 500; }
+    .demo-form { padding: 24px; }
+    .demo-field {
+      display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px;
+    }
+    .demo-field label { font-size: 12px; color: var(--muted); font-weight: 600; letter-spacing: 0.5px; }
+    .demo-input {
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px 14px;
+      font-size: 14px; color: var(--text);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .demo-input.filled { border-color: rgba(108,99,255,0.4); background: rgba(108,99,255,0.07); }
+    .demo-input .check { color: var(--accent3); font-size: 13px; }
+    .demo-fields-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .demo-fill-btn {
+      width: 100%; padding: 12px;
+      background: linear-gradient(135deg, var(--accent), #9B94FF);
+      border: none; border-radius: 8px;
+      font-size: 14px; font-weight: 700; color: #fff;
+      cursor: pointer; margin-top: 8px;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .demo-counter {
+      font-size: 12px; color: var(--accent2); text-align: center; margin-top: 10px;
+    }
+
+    .demo-text h2 { margin-bottom: 20px; }
+    .demo-features { display: flex; flex-direction: column; gap: 20px; margin-top: 36px; }
+    .demo-feature {
+      display: flex; gap: 16px; align-items: flex-start;
+    }
+    .demo-feature-icon {
+      width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; font-size: 18px;
+      background: rgba(108,99,255,0.12); border: 1px solid rgba(108,99,255,0.2);
+    }
+    .demo-feature h4 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+    .demo-feature p { font-size: 14px; color: var(--muted); line-height: 1.6; }
+
+    /* ─── FEATURES TABS ───────────────────────────── */
+    .features-section { }
+    .features-header { text-align: center; margin-bottom: 64px; }
+    .features-tabs {
+      display: flex; justify-content: center; gap: 8px; margin-bottom: 48px; flex-wrap: wrap;
+    }
+    .tab-btn {
+      padding: 10px 20px; border-radius: 100px; font-size: 14px; font-weight: 600;
+      border: 1px solid var(--border); background: transparent; color: var(--muted);
+      cursor: pointer; transition: all .2s;
+    }
+    .tab-btn.active, .tab-btn:hover {
+      background: var(--bg2); border-color: var(--border2); color: var(--text);
+    }
+    .tab-btn.active {
+      background: rgba(108,99,255,0.15); border-color: rgba(108,99,255,0.4); color: var(--accent2);
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; }
+    .tab-visual {
+      background: var(--bg2); border: 1px solid var(--border2); border-radius: var(--radius2);
+      padding: 32px; min-height: 340px; display: flex; flex-direction: column; gap: 16px;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.4);
+    }
+    .tab-text h3 { font-size: 32px; font-weight: 800; letter-spacing: -1px; margin-bottom: 16px; }
+    .tab-text p { font-size: 16px; color: var(--muted); line-height: 1.7; margin-bottom: 28px; }
+    .checklist { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+    .checklist li { display: flex; gap: 10px; font-size: 15px; color: var(--muted); align-items: flex-start; }
+    .checklist li::before { content: '✓'; color: var(--accent3); font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+
+    /* job card mock */
+    .job-card-mock {
+      background: var(--bg3); border: 1px solid var(--border); border-radius: 12px;
+      padding: 16px; display: flex; gap: 14px; align-items: flex-start;
+    }
+    .job-logo-mock {
+      width: 40px; height: 40px; border-radius: 8px;
+      background: linear-gradient(135deg, #6C63FF, #4ECDC4);
+      flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 14px; color: #fff;
+    }
+    .job-info h5 { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+    .job-info p { font-size: 12px; color: var(--muted); }
+    .job-match {
+      margin-left: auto; flex-shrink: 0;
+      background: rgba(78,205,196,0.12); border: 1px solid rgba(78,205,196,0.25);
+      color: var(--accent3); font-size: 12px; font-weight: 700;
+      border-radius: 100px; padding: 4px 12px;
+    }
+
+    /* ai output mock */
+    .ai-output {
+      background: var(--bg3); border: 1px solid var(--border); border-radius: 12px;
+      padding: 20px;
+    }
+    .ai-output-header { font-size: 12px; color: var(--muted); font-weight: 600; margin-bottom: 12px; letter-spacing: 0.5px; }
+    .ai-bullet { font-size: 13px; color: var(--text); line-height: 1.7; margin-bottom: 8px; padding-left: 14px; position: relative; }
+    .ai-bullet::before { content: '·'; position: absolute; left: 0; color: var(--accent2); font-size: 18px; top: -2px; }
+    .before-after { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .before-box, .after-box {
+      border-radius: 8px; padding: 12px;
+      font-size: 12px; line-height: 1.6;
+    }
+    .before-box { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); color: var(--muted); }
+    .after-box { background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.2); color: var(--text); }
+    .box-label { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+    .before-box .box-label { color: var(--red); }
+    .after-box .box-label { color: var(--green); }
+
+    /* score mock */
+    .score-big {
+      text-align: center; padding: 24px 0;
+    }
+    .score-num { font-size: 72px; font-weight: 900; letter-spacing: -3px; color: var(--accent3); }
+    .score-label { font-size: 13px; color: var(--muted); margin-top: 4px; }
+    .score-bar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+    .score-bar-label { font-size: 12px; color: var(--muted); width: 130px; flex-shrink: 0; }
+    .score-bar-track { flex: 1; height: 6px; background: var(--bg3); border-radius: 100px; overflow: hidden; }
+    .score-bar-fill { height: 100%; border-radius: 100px; background: linear-gradient(90deg, var(--accent), var(--accent3)); }
+    .score-bar-val { font-size: 12px; font-weight: 700; color: var(--text); width: 40px; text-align: right; }
+
+    /* ─── TESTIMONIALS ────────────────────────────── */
+    .testimonials-section { background: var(--bg1); }
+    .testimonials-header { text-align: center; margin-bottom: 56px; }
+    .testimonials-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .testimonial-card {
+      background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius2);
+      padding: 28px; display: flex; flex-direction: column; gap: 20px;
+      transition: border-color .2s, transform .2s;
+    }
+    .testimonial-card:hover { border-color: var(--border2); transform: translateY(-4px); }
+    .testimonial-stars { color: var(--yellow); font-size: 14px; letter-spacing: 2px; }
+    .testimonial-quote { font-size: 15px; color: var(--text); line-height: 1.75; flex: 1; }
+    .testimonial-author { display: flex; align-items: center; gap: 12px; }
+    .testimonial-avatar {
+      width: 44px; height: 44px; border-radius: 50%;
+      overflow: hidden; flex-shrink: 0;
+      background: var(--bg3);
+      border: 2px solid var(--border2);
+    }
+    .testimonial-avatar img {
+      width: 100%; height: 100%; object-fit: cover; display: block;
+    }
+    .testimonial-name { font-size: 14px; font-weight: 700; }
+    .testimonial-role { font-size: 12px; color: var(--muted); }
+
+    /* ─── STATS ───────────────────────────────────── */
+    .stats-section { text-align: center; }
+    .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; max-width: 720px; margin: 0 auto; }
+    .stat-item { padding: 40px 24px; }
+    .stat-num { font-size: 52px; font-weight: 900; letter-spacing: -2px; color: var(--text); line-height: 1; margin-bottom: 8px; }
+    .stat-num span { color: var(--accent2); }
+    .stat-label { font-size: 14px; color: var(--muted); font-weight: 500; }
+
+    /* ─── COMPANIES MARQUEE ───────────────────────── */
+    .companies-section { background: var(--bg1); padding: 60px 24px; text-align: center; }
+    .companies-title { font-size: 13px; color: var(--muted2); font-weight: 600; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 40px; }
+    .marquee-wrap { overflow: hidden; position: relative; }
+    .marquee-wrap::before, .marquee-wrap::after {
+      content: ''; position: absolute; top: 0; bottom: 0; width: 120px; z-index: 2;
+    }
+    .marquee-wrap::before { left: 0; background: linear-gradient(to right, var(--bg1), transparent); }
+    .marquee-wrap::after { right: 0; background: linear-gradient(to left, var(--bg1), transparent); }
+    .marquee-track {
+      display: flex; gap: 0;
+      animation: marquee 30s linear infinite;
+      width: max-content;
+    }
+    @keyframes marquee { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+    .company-tag {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 28px; font-size: 14px; font-weight: 600;
+      color: var(--muted2); white-space: nowrap;
+    }
+
+    /* ─── PRICING ─────────────────────────────────── */
+    .pricing-section { }
+    .pricing-header { text-align: center; margin-bottom: 56px; }
+    .pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; max-width: 960px; margin: 0 auto; }
+    .pricing-card {
+      background: var(--bg1); border: 1px solid var(--border);
+      border-radius: var(--radius2); padding: 32px;
+      display: flex; flex-direction: column; gap: 0;
+      position: relative; transition: border-color .2s;
+    }
+    .pricing-card:hover { border-color: var(--border2); }
+    .pricing-card.featured {
+      border-color: rgba(108,99,255,0.5);
+      background: linear-gradient(180deg, rgba(108,99,255,0.06) 0%, var(--bg1) 100%);
+    }
+    .pricing-badge {
+      position: absolute; top: -13px; left: 50%; transform: translateX(-50%);
+      background: var(--accent); color: #fff; font-size: 11px; font-weight: 700;
+      letter-spacing: 0.5px; padding: 4px 14px; border-radius: 100px;
+    }
+    .pricing-tier { font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+    .pricing-name { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
+    .pricing-desc { font-size: 14px; color: var(--muted); margin-bottom: 24px; line-height: 1.5; }
+    .pricing-price { margin-bottom: 28px; }
+    .pricing-amount { font-size: 48px; font-weight: 900; letter-spacing: -2px; line-height: 1; }
+    .pricing-per { font-size: 14px; color: var(--muted); }
+    .pricing-note { font-size: 12px; color: var(--muted2); margin-top: 6px; }
+    .pricing-divider { height: 1px; background: var(--border); margin-bottom: 24px; }
+    .pricing-features { list-style: none; display: flex; flex-direction: column; gap: 12px; flex: 1; margin-bottom: 32px; }
+    .pricing-features li { display: flex; gap: 10px; font-size: 14px; color: var(--muted); }
+    .pricing-features li.included { color: var(--text); }
+    .pricing-features li::before { content: '✓'; color: var(--accent3); font-weight: 700; flex-shrink: 0; }
+    .pricing-features li.not-included::before { content: '–'; color: var(--muted2); }
+    .pricing-features li.not-included { color: var(--muted2); }
+    .btn-tier {
+      width: 100%; padding: 13px; border-radius: 10px;
+      font-size: 15px; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      transition: all .2s; border: 1px solid var(--border2);
+      background: transparent; color: var(--text);
+    }
+    .btn-tier:hover { background: var(--bg2); }
+    .btn-tier.featured { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .btn-tier.featured:hover { opacity: 0.9; transform: translateY(-1px); }
+    .pricing-footer { text-align: center; margin-top: 32px; font-size: 13px; color: var(--muted2); }
+
+    /* ─── FAQ ─────────────────────────────────────── */
+    .faq-section { background: var(--bg1); }
+    .faq-header { text-align: center; margin-bottom: 56px; }
+    .faq-list { max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 4px; }
+    .faq-item {
+      background: var(--bg2); border: 1px solid var(--border); border-radius: 12px;
+      overflow: hidden; transition: border-color .2s;
+    }
+    .faq-item.open { border-color: var(--border2); }
+    .faq-q {
+      width: 100%; display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 24px; font-size: 16px; font-weight: 600;
+      background: none; border: none; color: var(--text); cursor: pointer; text-align: left; gap: 20px;
+    }
+    .faq-icon { font-size: 20px; color: var(--muted); flex-shrink: 0; transition: transform .2s; }
+    .faq-item.open .faq-icon { transform: rotate(45deg); }
+    .faq-a {
+      display: none; padding: 0 24px 20px;
+      font-size: 15px; color: var(--muted); line-height: 1.75;
+    }
+    .faq-item.open .faq-a { display: block; }
+
+    /* ─── FOOTER ──────────────────────────────────── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 60px 40px 32px;
+    }
+    .footer-grid {
+      max-width: 1100px; margin: 0 auto;
+      display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 48px;
+      margin-bottom: 48px;
+    }
+    .footer-brand p { font-size: 14px; color: var(--muted); margin-top: 12px; line-height: 1.7; max-width: 260px; }
+    .footer-col h5 { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 16px; letter-spacing: 0.3px; }
+    .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+    .footer-col ul li a { font-size: 14px; color: var(--muted); transition: color .15s; }
+    .footer-col ul li a:hover { color: var(--text); }
+    .footer-bottom {
+      max-width: 1100px; margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between;
+      padding-top: 24px; border-top: 1px solid var(--border);
+      font-size: 13px; color: var(--muted2);
+    }
+    .footer-status { display: flex; align-items: center; gap: 6px; }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+
+    /* ─── HERO FLOATING BG ───────────────────────── */
+    .hero-bg-layer {
+      position: absolute; inset: 0; overflow: hidden;
+      pointer-events: none; z-index: 0;
+    }
+    .hero-bg-item {
+      position: absolute; font-size: 11px; font-weight: 600;
+      color: rgba(255,255,255,0.055); white-space: nowrap;
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      letter-spacing: 0.4px; line-height: 1;
+    }
+    .hero-bg-item:nth-child(1)  { top: 12%; left: 4%;   animation: floatA 19s ease-in-out infinite; }
+    .hero-bg-item:nth-child(2)  { top: 20%; right: 4%;  animation: floatB 22s ease-in-out infinite; }
+    .hero-bg-item:nth-child(3)  { top: 32%; left: 7%;   animation: floatC 20s ease-in-out infinite; opacity:.04; }
+    .hero-bg-item:nth-child(4)  { top: 46%; right: 6%;  animation: floatA 17s ease-in-out infinite 2s; }
+    .hero-bg-item:nth-child(5)  { top: 58%; left: 3%;   animation: floatB 24s ease-in-out infinite 4s; }
+    .hero-bg-item:nth-child(6)  { top: 68%; right: 5%;  animation: floatC 18s ease-in-out infinite 1s; opacity:.04; }
+    .hero-bg-item:nth-child(7)  { top: 78%; left: 11%;  animation: floatA 21s ease-in-out infinite 3s; }
+    .hero-bg-item:nth-child(8)  { top: 16%; left: 42%;  animation: floatB 16s ease-in-out infinite 6s; opacity:.035; }
+    .hero-bg-item:nth-child(9)  { top: 63%; right: 18%; animation: floatC 23s ease-in-out infinite 2s; }
+    .hero-bg-item:nth-child(10) { top: 38%; left: 54%;  animation: floatA 20s ease-in-out infinite 5s; opacity:.04; }
+    .hero-bg-item:nth-child(11) { top: 84%; right: 9%;  animation: floatB 25s ease-in-out infinite 1s; }
+    .hero-bg-item:nth-child(12) { top: 26%; left: 28%;  animation: floatC 17s ease-in-out infinite 8s; opacity:.035; }
+    @keyframes floatA { 0%,100%{transform:translateY(0)}   50%{transform:translateY(-13px)} }
+    @keyframes floatB { 0%,100%{transform:translateY(0)}   50%{transform:translateY(11px)} }
+    @keyframes floatC { 0%,100%{transform:translateY(-7px)} 50%{transform:translateY(7px)} }
+    .hero > * { position: relative; z-index: 1; }
+
+    /* ─── THE LOOP ────────────────────────────────── */
+    .loop-section { background: var(--bg1); }
+    .loop-header { margin-bottom: 64px; }
+    .loop-layout {
+      display: grid; grid-template-columns: 1fr 1.15fr; gap: 80px; align-items: start;
+    }
+    .loop-left { position: sticky; top: 100px; }
+    .loop-step-tag { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+    .loop-step-counter { font-size: 13px; font-weight: 700; color: var(--muted2); letter-spacing: 0.5px; }
+    .loop-step-counter span { color: var(--text); }
+    .loop-step-dots { display: flex; gap: 6px; }
+    .loop-step-dot {
+      width: 20px; height: 3px; border-radius: 100px;
+      background: var(--border2); cursor: pointer; transition: background .25s, width .25s;
+    }
+    .loop-step-dot.active { background: var(--accent); width: 32px; }
+    .loop-big-num {
+      font-size: 110px; font-weight: 900; letter-spacing: -6px;
+      line-height: 1; color: rgba(255,255,255,0.04);
+      margin-bottom: -20px; user-select: none;
+    }
+    .loop-left h3 { font-size: 38px; font-weight: 800; letter-spacing: -1.5px; margin-bottom: 14px; line-height: 1.1; }
+    .loop-left p { font-size: 16px; color: var(--muted); line-height: 1.7; margin-bottom: 32px; }
+    .loop-nav-btns { display: flex; gap: 8px; }
+    .loop-btn {
+      width: 44px; height: 44px; border-radius: 50%;
+      border: 1px solid var(--border2); background: transparent; color: var(--text);
+      cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center;
+      transition: all .2s;
+    }
+    .loop-btn:hover:not(:disabled) { background: var(--bg2); border-color: rgba(255,255,255,0.22); }
+    .loop-btn:disabled { opacity: 0.25; cursor: not-allowed; }
+    .loop-right { display: flex; flex-direction: column; gap: 10px; }
+    .loop-step-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 16px; padding: 22px 24px;
+      cursor: pointer; transition: all .2s; opacity: 0.48;
+    }
+    .loop-step-card:hover { opacity: 0.72; border-color: var(--border2); }
+    .loop-step-card.active {
+      opacity: 1; border-color: rgba(108,99,255,0.42);
+      background: rgba(108,99,255,0.06);
+    }
+    .loop-card-num { font-size: 10px; font-weight: 700; color: var(--muted2); letter-spacing: 1.2px; margin-bottom: 6px; }
+    .loop-step-card.active .loop-card-num { color: var(--accent2); }
+    .loop-card-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+    .loop-card-desc { font-size: 13px; color: var(--muted); line-height: 1.65; display: none; margin-top: 8px; }
+    .loop-step-card.active .loop-card-desc { display: block; }
+    @media (max-width: 900px) {
+      .loop-layout { grid-template-columns: 1fr; gap: 36px; }
+      .loop-left { position: static; }
+      .loop-big-num { font-size: 72px; }
+      .loop-left h3 { font-size: 28px; }
+    }
+
+    /* ─── NEGOTIATE SECTION ───────────────────────── */
+    .negotiate-section { }
+    .negotiate-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; }
+    .neg-card {
+      background: var(--bg2); border: 1px solid var(--border2);
+      border-radius: var(--radius2); padding: 28px;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.35);
+    }
+    .neg-title { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 16px; }
+    .neg-salary-row {
+      background: var(--bg3); border: 1px solid var(--border); border-radius: 12px;
+      padding: 16px 18px; margin-bottom: 10px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .neg-salary-role { font-size: 13px; font-weight: 600; }
+    .neg-salary-range { font-size: 14px; font-weight: 800; color: var(--accent3); }
+    .neg-note { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .neg-script {
+      background: rgba(108,99,255,0.06); border: 1px solid rgba(108,99,255,0.2);
+      border-radius: 12px; padding: 16px; margin-top: 14px;
+    }
+    .neg-script-label { font-size: 10px; font-weight: 700; color: var(--accent2); letter-spacing: 1px; margin-bottom: 8px; }
+    .neg-script-text { font-size: 13px; color: var(--text); line-height: 1.7; }
+    @media (max-width: 900px) { .negotiate-grid { grid-template-columns: 1fr; gap: 36px; } }
+
+    /* ─── SOCIAL ICONS ────────────────────────────── */
+    .footer-social { display: flex; gap: 12px; margin-top: 16px; }
+    .footer-social a {
+      width: 34px; height: 34px; border-radius: 8px;
+      border: 1px solid var(--border); background: var(--bg1);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--muted); transition: color .15s, border-color .15s, background .15s;
+    }
+    .footer-social a:hover { color: var(--text); border-color: var(--border2); background: var(--bg2); }
+    .footer-social svg { width: 15px; height: 15px; fill: currentColor; }
+
+    /* ─── HIRED BADGE ─────────────────────────────── */
+    .hired-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.25);
+      border-radius: 100px; padding: 4px 12px;
+      font-size: 11px; font-weight: 700; color: var(--green);
+      letter-spacing: 0.5px; text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .hired-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+
+    /* ─── SCROLL REVEAL ───────────────────────────── */
+    .reveal { opacity: 0; transform: translateY(28px); transition: opacity .6s ease, transform .6s ease; }
+    .reveal.visible { opacity: 1; transform: none; }
+
+    /* ─── RESPONSIVE ──────────────────────────────── */
+    @media (max-width: 900px) {
+      nav { padding: 0 20px; }
+      .nav-links { display: none; }
+      .demo-grid, .tab-panel.active { grid-template-columns: 1fr; gap: 36px; }
+      .testimonials-grid { grid-template-columns: 1fr; }
+      .pricing-grid { grid-template-columns: 1fr; max-width: 420px; }
+      .stats-grid { grid-template-columns: 1fr; gap: 0; }
+      .footer-grid { grid-template-columns: 1fr 1fr; gap: 32px; }
+      .footer-bottom { flex-direction: column; gap: 12px; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ─── NAV ──────────────────────────────────────── -->
+<nav>
+  <a href="#" class="nav-logo">
+    <div class="nav-logo-icon">⚡</div>
+    rezme
+  </a>
+  <div class="nav-links">
+    <a href="#how-it-works">How it works</a>
+    <a href="#features">Features</a>
+    <a href="#features">Interview prep</a>
+    <a href="#salaries">Salaries</a>
+    <a href="#templates">Templates</a>
+    <a href="#pricing">Pricing</a>
+  </div>
+  <div class="nav-actions">
+    <a href="#" class="btn-ghost">Sign in</a>
+    <a href="#" class="btn-primary">
+      <svg class="chrome-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="12" cy="12" r="4" fill="white"/>
+        <path d="M12 8h8.5M6.5 20L10 14M17.5 20L14 14" stroke="white" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="12" cy="12" r="10" stroke="white" stroke-width="2"/>
+      </svg>
+      Add to Chrome
+    </a>
+  </div>
+</nav>
+
+<!-- ─── HERO ──────────────────────────────────────── -->
+<section class="hero">
+  <!-- floating job-activity background layer -->
+  <div class="hero-bg-layer" aria-hidden="true">
+    <div class="hero-bg-item">Staff Engineer · Figma &nbsp;·&nbsp; + offer received</div>
+    <div class="hero-bg-item">Member of Technical Staff · Anthropic</div>
+    <div class="hero-bg-item">Sr. SWE · Plaid &nbsp;·&nbsp; Match 94%</div>
+    <div class="hero-bg-item">Product Engineer · Linear · Remote</div>
+    <div class="hero-bg-item">Sr. Data Engineer · Databricks &nbsp;·&nbsp; + offer received</div>
+    <div class="hero-bg-item">Shipped payment service to production · cut p95 by 40%</div>
+    <div class="hero-bg-item">Software Engineer · Stripe · NYC · $210k–$260k</div>
+    <div class="hero-bg-item">Principal Engineer · Vercel · Remote</div>
+    <div class="hero-bg-item">4 applications opened · Notion, Linear, Figma, Vercel</div>
+    <div class="hero-bg-item">Sr. Frontend Engineer · Shopify &nbsp;·&nbsp; Match 91%</div>
+    <div class="hero-bg-item">+ recruiting call scheduled · Google</div>
+    <div class="hero-bg-item">Machine Learning Engineer · OpenAI · $240k base</div>
+  </div>
+  <div class="hero-badge">
+    <span class="hero-badge-dot"></span>
+    Now supports 50+ ATS platforms
+  </div>
+  <h1>
+    <span class="static">The extension that gets<br></span>
+    <span class="rotating-wrap" aria-label="engineers, PMs, designers, data scientists, ML engineers">
+      <span class="rotating-text">
+        <span>engineers</span>
+        <span>PMs</span>
+        <span>designers</span>
+        <span>data scientists</span>
+        <span>engineers</span>
+      </span>
+    </span>
+    <span class="static"> hired.</span>
+  </h1>
+  <p class="hero-sub">
+    Rezme fills every job application in one click — name, email, resume, cover letter, every custom dropdown — across Greenhouse, Lever, Workday, Ashby, and 50+ more ATS platforms.
+  </p>
+  <div class="hero-ctas">
+    <a href="#" class="btn-hero">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4" fill="white"/><path d="M12 8h8.5M6.5 20L10 14M17.5 20L14 14" stroke="white" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="10" stroke="white" stroke-width="2"/></svg>
+      Add to Chrome — it's free
+    </a>
+    <a href="#how-it-works" class="btn-hero-outline">See how it works →</a>
+  </div>
+  <div class="hero-rating">
+    <span class="stars">★★★★★</span>
+    <span>4.9 · Loved by 2,000+ job seekers</span>
+  </div>
+</section>
+
+<!-- ─── ATS TICKER ────────────────────────────────── -->
+<div class="ats-strip">
+  <div class="ats-ticker">
+    <!-- first copy -->
+    <span class="ats-item"><span>✓</span> Greenhouse</span>
+    <span class="ats-item"><span>✓</span> Lever</span>
+    <span class="ats-item"><span>✓</span> Workday</span>
+    <span class="ats-item"><span>✓</span> Ashby</span>
+    <span class="ats-item"><span>✓</span> SmartRecruiters</span>
+    <span class="ats-item"><span>✓</span> iCIMS</span>
+    <span class="ats-item"><span>✓</span> Workable</span>
+    <span class="ats-item"><span>✓</span> Taleo</span>
+    <span class="ats-item"><span>✓</span> BambooHR</span>
+    <span class="ats-item"><span>✓</span> JazzHR</span>
+    <span class="ats-item"><span>✓</span> Pinpoint</span>
+    <span class="ats-item"><span>✓</span> Bullhorn</span>
+    <span class="ats-item"><span>✓</span> Breezy HR</span>
+    <span class="ats-item"><span>✓</span> Jobvite</span>
+    <!-- second copy for infinite scroll -->
+    <span class="ats-item"><span>✓</span> Greenhouse</span>
+    <span class="ats-item"><span>✓</span> Lever</span>
+    <span class="ats-item"><span>✓</span> Workday</span>
+    <span class="ats-item"><span>✓</span> Ashby</span>
+    <span class="ats-item"><span>✓</span> SmartRecruiters</span>
+    <span class="ats-item"><span>✓</span> iCIMS</span>
+    <span class="ats-item"><span>✓</span> Workable</span>
+    <span class="ats-item"><span>✓</span> Taleo</span>
+    <span class="ats-item"><span>✓</span> BambooHR</span>
+    <span class="ats-item"><span>✓</span> JazzHR</span>
+    <span class="ats-item"><span>✓</span> Pinpoint</span>
+    <span class="ats-item"><span>✓</span> Bullhorn</span>
+    <span class="ats-item"><span>✓</span> Breezy HR</span>
+    <span class="ats-item"><span>✓</span> Jobvite</span>
+  </div>
+</div>
+
+<!-- ─── THE LOOP ──────────────────────────────────── -->
+<section class="loop-section" id="how-it-works">
+  <div class="container">
+    <div class="loop-header reveal">
+      <div class="section-label">The Loop</div>
+      <h2>From discovery to offer.<br>Five steps. One tool.</h2>
+    </div>
+    <div class="loop-layout reveal">
+      <!-- Left: sticky context panel -->
+      <div class="loop-left">
+        <div class="loop-step-tag">
+          <div class="loop-step-counter"><span id="loop-cur">01</span> / 05</div>
+          <div class="loop-step-dots">
+            <div class="loop-step-dot active" onclick="goToLoopStep(0)"></div>
+            <div class="loop-step-dot" onclick="goToLoopStep(1)"></div>
+            <div class="loop-step-dot" onclick="goToLoopStep(2)"></div>
+            <div class="loop-step-dot" onclick="goToLoopStep(3)"></div>
+            <div class="loop-step-dot" onclick="goToLoopStep(4)"></div>
+          </div>
+        </div>
+        <div class="loop-big-num" id="loop-big-num">01</div>
+        <h3 id="loop-title">Discover</h3>
+        <p id="loop-desc">Find roles that actually fit. Rezme reads your resume and surfaces jobs with the highest match scores — so you spend time on applications worth sending.</p>
+        <div class="loop-nav-btns">
+          <button class="loop-btn" id="loop-prev" onclick="loopNav(-1)" disabled>←</button>
+          <button class="loop-btn" id="loop-next" onclick="loopNav(1)">→</button>
+        </div>
+      </div>
+      <!-- Right: step cards -->
+      <div class="loop-right">
+        <div class="loop-step-card active" onclick="goToLoopStep(0)">
+          <div class="loop-card-num">STEP 01</div>
+          <div class="loop-card-title">🔍 Discover</div>
+          <div class="loop-card-desc">Find roles that actually fit. Rezme reads your resume and surfaces jobs with the highest match scores — so you spend time on applications worth sending.</div>
+        </div>
+        <div class="loop-step-card" onclick="goToLoopStep(1)">
+          <div class="loop-card-num">STEP 02</div>
+          <div class="loop-card-title">⚡ Autofill</div>
+          <div class="loop-card-desc">Fill any application in one click. Name, email, phone, resume, cover letter, every custom dropdown — across every ATS that exists.</div>
+        </div>
+        <div class="loop-step-card" onclick="goToLoopStep(2)">
+          <div class="loop-card-num">STEP 03</div>
+          <div class="loop-card-title">📊 Score</div>
+          <div class="loop-card-desc">See your resume score before you hit submit. ATS readability, keyword gaps, impact bullets — fix it all before the recruiter sees it.</div>
+        </div>
+        <div class="loop-step-card" onclick="goToLoopStep(3)">
+          <div class="loop-card-num">STEP 04</div>
+          <div class="loop-card-title">🎤 Interview Prep</div>
+          <div class="loop-card-desc">Walk in knowing exactly what they'll ask. Role-specific questions generated from the job description, with STAR coaching anchored to your own resume.</div>
+        </div>
+        <div class="loop-step-card" onclick="goToLoopStep(4)">
+          <div class="loop-card-num">STEP 05</div>
+          <div class="loop-card-title">💰 Negotiate</div>
+          <div class="loop-card-desc">Know your worth before the offer lands. Rezme pulls live salary data for your role and location, then scripts a counter-offer you can send word-for-word.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── DEMO SECTION ──────────────────────────────── -->
+<section class="demo-section" id="how-it-works-demo">
+  <div class="container">
+    <div class="demo-grid reveal">
+      <!-- Card mock -->
+      <div class="demo-card">
+        <div class="demo-card-header">
+          <div class="demo-card-dots"><span></span><span></span><span></span></div>
+          <div class="demo-card-title">jobs.greenhouse.io · Apply</div>
+          <div></div>
+        </div>
+        <div class="demo-form">
+          <div class="demo-fields-row">
+            <div class="demo-field">
+              <label>FIRST NAME</label>
+              <div class="demo-input filled">Ahmed <span class="check">✓</span></div>
+            </div>
+            <div class="demo-field">
+              <label>LAST NAME</label>
+              <div class="demo-input filled">Faruk <span class="check">✓</span></div>
+            </div>
+          </div>
+          <div class="demo-field">
+            <label>EMAIL</label>
+            <div class="demo-input filled">ahmed@example.com <span class="check">✓</span></div>
+          </div>
+          <div class="demo-fields-row">
+            <div class="demo-field">
+              <label>PHONE</label>
+              <div class="demo-input filled">+1 555 123… <span class="check">✓</span></div>
+            </div>
+            <div class="demo-field">
+              <label>COUNTRY</label>
+              <div class="demo-input filled">United States <span class="check">✓</span></div>
+            </div>
+          </div>
+          <div class="demo-field">
+            <label>LINKEDIN</label>
+            <div class="demo-input filled">linkedin.com/in/ahmed… <span class="check">✓</span></div>
+          </div>
+          <div class="demo-field">
+            <label>RESUME / CV</label>
+            <div class="demo-input filled">Ahmed_Resume.pdf <span class="check">✓</span></div>
+          </div>
+          <button class="demo-fill-btn" onclick="animateFill(this)">⚡ Autofill with Rezme</button>
+          <div class="demo-counter">14 fields filled in 0.9s</div>
+        </div>
+      </div>
+      <!-- Text -->
+      <div class="demo-text">
+        <div class="section-label">The proof</div>
+        <h2>Fill any form in under a second.</h2>
+        <p class="section-sub">Save your profile once. Rezme reads every field on every page — even shadow DOM, iframes, and custom dropdowns — and fills them all at once.</p>
+        <div class="demo-features">
+          <div class="demo-feature">
+            <div class="demo-feature-icon">🎯</div>
+            <div>
+              <h4>Universal field detection</h4>
+              <p>Handles native inputs, React-controlled selects, Workday's custom widgets, and more.</p>
+            </div>
+          </div>
+          <div class="demo-feature">
+            <div class="demo-feature-icon">📄</div>
+            <div>
+              <h4>Resume file autofill</h4>
+              <p>Attaches your saved resume PDF to any file input automatically — no drag-and-drop needed.</p>
+            </div>
+          </div>
+          <div class="demo-feature">
+            <div class="demo-feature-icon">🤖</div>
+            <div>
+              <h4>AI cover letter, one click</h4>
+              <p>Generates a tailored cover letter from the job description and your profile in seconds.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── FEATURES TABS ─────────────────────────────── -->
+<section class="features-section" id="features">
+  <div class="container">
+    <div class="features-header reveal">
+      <div class="section-label">What Rezme does</div>
+      <h2>Everything you need to apply faster.</h2>
+      <p class="section-sub" style="margin:0 auto">Four superpowers in a single extension.</p>
+    </div>
+    <div class="features-tabs">
+      <button class="tab-btn active" onclick="switchTab(0, this)">⚡ Autofill</button>
+      <button class="tab-btn" onclick="switchTab(1, this)">✍️ Cover Letter</button>
+      <button class="tab-btn" onclick="switchTab(2, this)">📊 Resume Score</button>
+      <button class="tab-btn" onclick="switchTab(3, this)">🔍 Job Insights</button>
+      <button class="tab-btn" onclick="switchTab(4, this)">🎤 Interview Prep</button>
+    </div>
+
+    <!-- Tab 0: Autofill -->
+    <div class="tab-panel active" id="tab-0">
+      <div class="tab-visual">
+        <div style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Rezme — My Profile</div>
+        <div class="demo-fields-row">
+          <div class="demo-field"><label>NAME</label><div class="demo-input filled">Ahmed Faruk <span class="check">✓</span></div></div>
+          <div class="demo-field"><label>EMAIL</label><div class="demo-input filled">ahmed@… <span class="check">✓</span></div></div>
+        </div>
+        <div class="demo-fields-row">
+          <div class="demo-field"><label>PHONE</label><div class="demo-input filled">+1 555… <span class="check">✓</span></div></div>
+          <div class="demo-field"><label>CITY</label><div class="demo-input filled">Austin, TX <span class="check">✓</span></div></div>
+        </div>
+        <div class="demo-field"><label>LINKEDIN URL</label><div class="demo-input filled">linkedin.com/in/ahmed <span class="check">✓</span></div></div>
+        <div class="demo-field"><label>RESUME FILE</label><div class="demo-input filled">Ahmed_Faruk_Resume.pdf <span class="check">✓</span></div></div>
+        <button class="demo-fill-btn" style="margin-top:auto">⚡ Fill this application</button>
+      </div>
+      <div class="tab-text">
+        <h3>One click. Every field.</h3>
+        <p>Rezme reads your profile once and fires it into any job application form — name, email, phone, location, LinkedIn, resume file, education, even Yes/No sponsorship questions.</p>
+        <ul class="checklist">
+          <li>Works across shadow DOM, iframes &amp; React-controlled inputs</li>
+          <li>Handles custom dropdowns — Country, State, School, and more</li>
+          <li>Fills location autocomplete comboboxes intelligently</li>
+          <li>Attaches your resume PDF to file inputs automatically</li>
+          <li>Answers screening radio buttons and Yes/No buttons</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Tab 1: Cover Letter -->
+    <div class="tab-panel" id="tab-1">
+      <div class="tab-visual">
+        <div style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:14px">AI Cover Letter</div>
+        <div class="ai-output">
+          <div class="ai-output-header">GENERATED FOR: Senior Software Engineer · Anthropic</div>
+          <div class="ai-bullet">I'm drawn to Anthropic's mission of building AI that's safe and beneficial — it's the kind of work I want my career defined by.</div>
+          <div class="ai-bullet">At my last role I shipped a real-time inference pipeline that cut p95 latency by 40%, handling 2M+ daily requests — exactly the scale challenges Anthropic faces.</div>
+          <div class="ai-bullet">I've followed Constitutional AI research closely and would love to contribute to the evals and RLHF work your team is leading.</div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="demo-fill-btn" style="background:rgba(108,99,255,0.2);border:1px solid rgba(108,99,255,0.4);color:var(--accent2)">Regenerate</button>
+          <button class="demo-fill-btn" style="flex:2">Insert into form ✓</button>
+        </div>
+      </div>
+      <div class="tab-text">
+        <h3>Cover letters that don't read like AI.</h3>
+        <p>Rezme scrapes the job description, matches it against your profile, and writes a cover letter in your voice — specific to the company, the role, and your actual experience.</p>
+        <ul class="checklist">
+          <li>Pulls real keywords and signals from the job description</li>
+          <li>References your specific achievements and projects</li>
+          <li>Sounds like you, not ChatGPT</li>
+          <li>Inserts directly into the cover letter field</li>
+          <li>One-click regenerate for a fresh angle</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Tab 2: Resume Score -->
+    <div class="tab-panel" id="tab-2">
+      <div class="tab-visual">
+        <div class="score-big">
+          <div class="score-num">87</div>
+          <div class="score-label">Resume match score · Strong</div>
+        </div>
+        <div class="score-bar-row"><span class="score-bar-label">ATS readability</span><div class="score-bar-track"><div class="score-bar-fill" style="width:96%"></div></div><span class="score-bar-val">24/25</span></div>
+        <div class="score-bar-row"><span class="score-bar-label">Keyword match</span><div class="score-bar-track"><div class="score-bar-fill" style="width:80%"></div></div><span class="score-bar-val">20/25</span></div>
+        <div class="score-bar-row"><span class="score-bar-label">Writing quality</span><div class="score-bar-track"><div class="score-bar-fill" style="width:90%"></div></div><span class="score-bar-val">18/20</span></div>
+        <div class="score-bar-row"><span class="score-bar-label">Impact bullets</span><div class="score-bar-track"><div class="score-bar-fill" style="width:75%"></div></div><span class="score-bar-val">15/20</span></div>
+        <div class="score-bar-row"><span class="score-bar-label">Formatting</span><div class="score-bar-track"><div class="score-bar-fill" style="width:100%"></div></div><span class="score-bar-val">10/10</span></div>
+      </div>
+      <div class="tab-text">
+        <h3>See what the recruiter's ATS sees.</h3>
+        <p>Rezme runs your resume against the job's requirements and scores it across five categories — before you apply. See exactly what's missing and what to rewrite.</p>
+        <ul class="checklist">
+          <li>ATS readability and formatting check</li>
+          <li>Keyword gap analysis vs the job description</li>
+          <li>Impact bullet scorer — vague vs quantified</li>
+          <li>Specific fix suggestions, not generic tips</li>
+          <li>Before/after bullet rewrites with AI</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Tab 3: Job Insights -->
+    <div class="tab-panel" id="tab-3">
+      <div class="tab-visual">
+        <div style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:14px">Job Insights · Scraped live</div>
+        <div class="job-card-mock" style="margin-bottom:10px">
+          <div class="job-logo-mock">AN</div>
+          <div class="job-info"><h5>Member of Technical Staff</h5><p>Anthropic · SF · Hybrid · Posted today</p></div>
+          <div class="job-match">Match 92</div>
+        </div>
+        <div class="job-card-mock" style="margin-bottom:10px">
+          <div class="job-logo-mock" style="background:linear-gradient(135deg,#00D2FF,#4ECDC4)">VR</div>
+          <div class="job-info"><h5>Sr. Software Engineer</h5><p>Vercel · Remote · US · Posted 1d ago</p></div>
+          <div class="job-match">Match 88</div>
+        </div>
+        <div class="job-card-mock">
+          <div class="job-logo-mock" style="background:linear-gradient(135deg,#635BFF,#00D4FF)">ST</div>
+          <div class="job-info"><h5>Software Engineer, Payments</h5><p>Stripe · NYC · On-site · Posted 2d ago</p></div>
+          <div class="job-match">Match 81</div>
+        </div>
+      </div>
+      <div class="tab-text">
+        <h3>Understand the job before you apply.</h3>
+        <p>Rezme scrapes the full job description and breaks it down — required skills, salary signals, culture cues, and how well your profile actually fits.</p>
+        <ul class="checklist">
+          <li>Extracts must-have vs nice-to-have skills</li>
+          <li>Highlights keywords missing from your resume</li>
+          <li>Estimates salary range from signals in the posting</li>
+          <li>Flags green and red flags in the job description</li>
+          <li>Match score: how well your profile fits this role</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Tab 4: Interview Prep -->
+    <div class="tab-panel" id="tab-4">
+      <div class="tab-visual">
+        <div style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:14px">Interview Prep · Anthropic · SWE</div>
+        <div class="ai-output" style="margin-bottom:10px">
+          <div class="ai-output-header">LIKELY QUESTION #1</div>
+          <div class="ai-bullet" style="font-weight:600;color:var(--text)">"Tell me about a time you improved system reliability at scale."</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:8px;padding-left:14px">Tip: Use STAR format. Reference your AWS latency project — quantify the impact.</div>
+        </div>
+        <div class="ai-output" style="margin-bottom:10px">
+          <div class="ai-output-header">LIKELY QUESTION #2</div>
+          <div class="ai-bullet" style="font-weight:600;color:var(--text)">"How do you approach debugging a production incident with incomplete logs?"</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:8px;padding-left:14px">Tip: Mention systematic isolation, metrics triangulation, and blameless post-mortems.</div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:4px">
+          <button class="demo-fill-btn" style="background:rgba(108,99,255,0.15);border:1px solid rgba(108,99,255,0.3);color:var(--accent2);flex:1">Next question</button>
+          <button class="demo-fill-btn" style="flex:1">Practice answer 🎤</button>
+        </div>
+      </div>
+      <div class="tab-text">
+        <h3>Walk in knowing exactly what they'll ask.</h3>
+        <p>Rezme reads the job description and your resume, then generates the questions most likely to come up in your interview — behavioural, technical, and role-specific — with coaching on how to answer each one.</p>
+        <ul class="checklist">
+          <li>Questions pulled from the actual job description</li>
+          <li>STAR-format coaching for every behavioural question</li>
+          <li>Technical questions matched to your stack</li>
+          <li>Company-specific culture and values questions</li>
+          <li>Practice mode with AI feedback on your answers</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── NEGOTIATE SECTION ─────────────────────────── -->
+<section class="negotiate-section" id="salaries">
+  <div class="container">
+    <div class="negotiate-grid reveal">
+      <!-- text -->
+      <div>
+        <div class="section-label">Negotiate</div>
+        <h2>Know your number<br>before they call.</h2>
+        <p class="section-sub" style="margin-bottom:32px">The offer is just the opening bid. Rezme pulls live salary data for your exact role, level, and location — and writes a counter-offer script you can send word-for-word.</p>
+        <div class="demo-features">
+          <div class="demo-feature">
+            <div class="demo-feature-icon">📊</div>
+            <div>
+              <h4>Live salary benchmarks</h4>
+              <p>P25 / P50 / P75 data for your role, location, and YOE — pulled fresh for every application.</p>
+            </div>
+          </div>
+          <div class="demo-feature">
+            <div class="demo-feature-icon">✍️</div>
+            <div>
+              <h4>Counter-offer scripts</h4>
+              <p>A ready-to-send email that's polite, specific, and anchored to real market data — not vibes.</p>
+            </div>
+          </div>
+          <div class="demo-feature">
+            <div class="demo-feature-icon">💡</div>
+            <div>
+              <h4>Equity & total comp breakdown</h4>
+              <p>Understand the full picture: base, bonus, equity, and refreshes — so you're comparing apples to apples.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- card mock -->
+      <div class="neg-card">
+        <div class="neg-title">Salary Benchmarks · Software Engineer · SF Bay Area</div>
+        <div class="neg-salary-row">
+          <div>
+            <div class="neg-salary-role">L4 Software Engineer</div>
+            <div class="neg-note">Anthropic · SF · Full-time</div>
+          </div>
+          <div class="neg-salary-range">$195k – $260k</div>
+        </div>
+        <div class="neg-salary-row">
+          <div>
+            <div class="neg-salary-role">Staff Engineer</div>
+            <div class="neg-note">Stripe · SF · Full-time</div>
+          </div>
+          <div class="neg-salary-range">$245k – $330k</div>
+        </div>
+        <div class="neg-salary-row">
+          <div>
+            <div class="neg-salary-role">Senior SWE</div>
+            <div class="neg-note">Vercel · Remote · Full-time</div>
+          </div>
+          <div class="neg-salary-range">$175k – $230k</div>
+        </div>
+        <div class="neg-script">
+          <div class="neg-script-label">COUNTER-OFFER SCRIPT</div>
+          <div class="neg-script-text">"Thank you for the offer of $195k. Based on market data for this role in SF, and given my 6 years of relevant experience, I was expecting closer to $220k. Is there flexibility to get there?"</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── TEMPLATES STUB ─────────────────────────────── -->
+<section style="background:var(--bg1);padding:80px 24px" id="templates">
+  <div class="container">
+    <div class="reveal" style="text-align:center">
+      <div class="section-label">Templates</div>
+      <h2>ATS-ready resume templates.</h2>
+      <p class="section-sub" style="margin:0 auto 32px">Professionally designed layouts that pass every ATS scan and look great to humans. Pick a template, fill your profile, export in one click.</p>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;max-width:860px;margin:0 auto">
+        <!-- Modern template mock -->
+        <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:12px;aspect-ratio:.75;display:flex;flex-direction:column;padding:16px;gap:5px;cursor:pointer;transition:border-color .2s;overflow:hidden" onmouseover="this.style.borderColor='rgba(108,99,255,.45)'" onmouseout="this.style.borderColor='rgba(255,255,255,.12)'">
+          <div style="height:8px;width:60%;background:var(--accent);border-radius:4px;opacity:.7"></div>
+          <div style="height:5px;width:40%;background:var(--border2);border-radius:4px"></div>
+          <div style="height:1px;background:var(--border);margin:4px 0"></div>
+          <div style="height:4px;background:var(--border);border-radius:2px;width:95%"></div>
+          <div style="height:4px;background:var(--border);border-radius:2px;width:80%"></div>
+          <div style="height:4px;background:var(--border);border-radius:2px;width:88%"></div>
+          <div style="height:4px;background:var(--border);border-radius:2px;width:72%"></div>
+          <div style="height:4px;background:var(--border);border-radius:2px;width:90%"></div>
+          <div style="height:4px;background:var(--border);border-radius:2px;width:65%"></div>
+          <div style="height:4px;background:var(--border);border-radius:2px;width:83%"></div>
+          <div style="margin-top:auto;font-size:11px;color:var(--muted);text-align:center;padding-top:8px">Modern</div>
+        </div>
+        <!-- Classic template mock -->
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;aspect-ratio:.75;display:flex;flex-direction:column;padding:16px;gap:5px;cursor:pointer;transition:border-color .2s;overflow:hidden" onmouseover="this.style.borderColor='rgba(108,99,255,.4)'" onmouseout="this.style.borderColor='rgba(255,255,255,.07)'">
+          <div style="height:10px;width:50%;background:rgba(255,255,255,.15);border-radius:4px;margin:0 auto"></div>
+          <div style="height:4px;width:35%;background:var(--border2);border-radius:4px;margin:0 auto"></div>
+          <div style="height:1px;background:rgba(255,255,255,.05);margin:4px 0"></div>
+          <div style="height:4px;background:var(--border);border-radius:2px;width:100%"></div>
+          <div style="height:4px;background:var(--border);border-radius:2px;width:90%"></div>
+          <div style="height:4px;background:var(--border);border-radius:2px;width:95%"></div>
+          <div style="height:4px;background:var(--border);border-radius:2px;width:78%"></div>
+          <div style="height:4px;background:var(--border);border-radius:2px;width:88%"></div>
+          <div style="height:4px;background:var(--border);border-radius:2px;width:70%"></div>
+          <div style="margin-top:auto;font-size:11px;color:var(--muted);text-align:center;padding-top:8px">Classic</div>
+        </div>
+        <!-- Creative template mock -->
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;aspect-ratio:.75;display:flex;flex-direction:column;padding:12px;gap:4px;cursor:pointer;transition:border-color .2s;overflow:hidden" onmouseover="this.style.borderColor='rgba(78,205,196,.4)'" onmouseout="this.style.borderColor='rgba(255,255,255,.07)'">
+          <div style="display:flex;gap:6px;margin-bottom:4px;align-items:center">
+            <div style="width:22px;height:22px;border-radius:50%;background:var(--accent3);opacity:.6;flex-shrink:0"></div>
+            <div style="flex:1">
+              <div style="height:4px;background:var(--border2);border-radius:2px;width:70%;margin-bottom:3px"></div>
+              <div style="height:3px;width:50%;background:var(--border);border-radius:2px"></div>
+            </div>
+          </div>
+          <div style="height:3px;background:var(--accent3);border-radius:2px;opacity:.3;width:100%"></div>
+          <div style="height:3px;background:var(--border);border-radius:2px;width:90%"></div>
+          <div style="height:3px;background:var(--border);border-radius:2px;width:75%"></div>
+          <div style="height:3px;background:var(--border);border-radius:2px;width:85%"></div>
+          <div style="height:3px;background:var(--border);border-radius:2px;width:62%"></div>
+          <div style="height:3px;background:var(--border);border-radius:2px;width:92%"></div>
+          <div style="height:3px;background:var(--border);border-radius:2px;width:70%"></div>
+          <div style="height:3px;background:var(--border);border-radius:2px;width:80%"></div>
+          <div style="margin-top:auto;font-size:11px;color:var(--muted);text-align:center;padding-top:8px">Creative</div>
+        </div>
+        <!-- Executive template mock -->
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;aspect-ratio:.75;display:flex;flex-direction:column;padding:14px;gap:0;cursor:pointer;transition:border-color .2s;overflow:hidden" onmouseover="this.style.borderColor='rgba(108,99,255,.4)'" onmouseout="this.style.borderColor='rgba(255,255,255,.07)'">
+          <div style="height:6px;width:70%;background:rgba(255,255,255,.12);border-radius:4px;margin-bottom:4px"></div>
+          <div style="height:4px;width:45%;background:var(--border);border-radius:4px;margin-bottom:6px"></div>
+          <div style="display:grid;grid-template-columns:1fr 1.6fr;gap:6px;flex:1">
+            <div style="display:flex;flex-direction:column;gap:3px">
+              <div style="height:3px;background:var(--border);border-radius:2px;width:100%"></div>
+              <div style="height:3px;background:var(--border);border-radius:2px;width:85%"></div>
+              <div style="height:3px;background:var(--border);border-radius:2px;width:90%"></div>
+              <div style="height:3px;background:var(--border);border-radius:2px;width:70%"></div>
+              <div style="height:3px;background:var(--border);border-radius:2px;width:95%"></div>
+              <div style="height:3px;background:var(--border);border-radius:2px;width:60%"></div>
+              <div style="height:3px;background:var(--border);border-radius:2px;width:80%"></div>
+              <div style="height:3px;background:var(--border);border-radius:2px;width:75%"></div>
+              <div style="height:3px;background:var(--border);border-radius:2px;width:88%"></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:3px">
+              <div style="height:3px;background:var(--border);border-radius:2px;width:95%"></div>
+              <div style="height:3px;background:var(--border);border-radius:2px;width:80%"></div>
+              <div style="height:3px;background:var(--border);border-radius:2px;width:65%"></div>
+              <div style="height:3px;background:var(--border);border-radius:2px;width:90%"></div>
+              <div style="height:3px;background:var(--border);border-radius:2px;width:72%"></div>
+              <div style="height:3px;background:var(--border);border-radius:2px;width:85%"></div>
+              <div style="height:3px;background:var(--border);border-radius:2px;width:60%"></div>
+            </div>
+          </div>
+          <div style="margin-top:auto;font-size:11px;color:var(--muted);text-align:center;padding-top:8px">Executive</div>
+        </div>
+      </div>
+      <p style="font-size:13px;color:var(--muted2);margin-top:24px">6 more templates coming soon — <a href="#" style="color:var(--accent2);text-decoration:underline;text-underline-offset:3px">get notified</a></p>
+    </div>
+  </div>
+</section>
+
+<!-- ─── TESTIMONIALS ──────────────────────────────── -->
+<section class="testimonials-section">
+  <div class="container">
+    <div class="testimonials-header reveal">
+      <div class="hired-badge">Hired</div>
+      <h2>From the people who got hired.</h2>
+    </div>
+    <div class="testimonials-grid reveal">
+      <div class="testimonial-card">
+        <div class="testimonial-stars">★★★★★</div>
+        <p class="testimonial-quote">"I used to spend 20 minutes per application just filling in the same fields over and over. Rezme cut that to under a minute. I applied to 40 jobs in a single afternoon."</p>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar"><img src="https://i.pravatar.cc/88?img=47" alt="Sarah L." loading="lazy" /></div>
+          <div>
+            <div class="testimonial-name">Sarah L.</div>
+            <div class="testimonial-role">Software Engineer · Hired at Notion</div>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <div class="testimonial-stars">★★★★★</div>
+        <p class="testimonial-quote">"The AI cover letter actually sounds like me — it referenced my specific projects and why I care about the company's mission. Three recruiters mentioned it in their outreach."</p>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar"><img src="https://i.pravatar.cc/88?img=11" alt="Marcus K." loading="lazy" /></div>
+          <div>
+            <div class="testimonial-name">Marcus K.</div>
+            <div class="testimonial-role">Product Manager · Hired at Linear</div>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <div class="testimonial-stars">★★★★★</div>
+        <p class="testimonial-quote">"Workday forms are a nightmare — dropdowns that don't respond to normal typing, location fields that break, all of it. Rezme just handles it. It's the only tool that actually works on Workday."</p>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar"><img src="https://i.pravatar.cc/88?img=32" alt="Jamie P." loading="lazy" /></div>
+          <div>
+            <div class="testimonial-name">Jamie P.</div>
+            <div class="testimonial-role">Data Scientist · Hired at Stripe</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── STATS ──────────────────────────────────────── -->
+<section class="stats-section">
+  <div class="container">
+    <div class="stats-grid reveal">
+      <div class="stat-item">
+        <div class="stat-num">50<span>+</span></div>
+        <div class="stat-label">ATS platforms supported</div>
+      </div>
+      <div class="stat-item" style="border-left:1px solid var(--border);border-right:1px solid var(--border)">
+        <div class="stat-num">2<span>min</span></div>
+        <div class="stat-label">Average time saved per application</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">3<span>×</span></div>
+        <div class="stat-label">More applications per session</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── COMPANIES MARQUEE ──────────────────────────── -->
+<div class="companies-section">
+  <div class="companies-title">Rezme users hired at</div>
+  <div class="marquee-wrap">
+    <div class="marquee-track">
+      <span class="company-tag">Google</span>
+      <span class="company-tag">Meta</span>
+      <span class="company-tag">Apple</span>
+      <span class="company-tag">Microsoft</span>
+      <span class="company-tag">Amazon</span>
+      <span class="company-tag">Netflix</span>
+      <span class="company-tag">Stripe</span>
+      <span class="company-tag">Anthropic</span>
+      <span class="company-tag">Databricks</span>
+      <span class="company-tag">Vercel</span>
+      <span class="company-tag">Linear</span>
+      <span class="company-tag">Notion</span>
+      <span class="company-tag">Figma</span>
+      <span class="company-tag">OpenAI</span>
+      <span class="company-tag">Shopify</span>
+      <span class="company-tag">Snowflake</span>
+      <!-- duplicate -->
+      <span class="company-tag">Google</span>
+      <span class="company-tag">Meta</span>
+      <span class="company-tag">Apple</span>
+      <span class="company-tag">Microsoft</span>
+      <span class="company-tag">Amazon</span>
+      <span class="company-tag">Netflix</span>
+      <span class="company-tag">Stripe</span>
+      <span class="company-tag">Anthropic</span>
+      <span class="company-tag">Databricks</span>
+      <span class="company-tag">Vercel</span>
+      <span class="company-tag">Linear</span>
+      <span class="company-tag">Notion</span>
+      <span class="company-tag">Figma</span>
+      <span class="company-tag">OpenAI</span>
+      <span class="company-tag">Shopify</span>
+      <span class="company-tag">Snowflake</span>
+    </div>
+  </div>
+</div>
+
+<!-- ─── PRICING ────────────────────────────────────── -->
+<section class="pricing-section" id="pricing">
+  <div class="container">
+    <div class="pricing-header reveal">
+      <div class="section-label">Pricing</div>
+      <h2>Simple pricing. Cancel anytime.</h2>
+      <p class="section-sub" style="margin:0 auto">Start free. Upgrade when you're ready to go all-in.</p>
+    </div>
+    <div class="pricing-grid reveal">
+      <!-- Free -->
+      <div class="pricing-card">
+        <div class="pricing-tier">Free</div>
+        <div class="pricing-name">Starter</div>
+        <div class="pricing-desc">Everything you need to start applying faster.</div>
+        <div class="pricing-price">
+          <div class="pricing-amount">$0</div>
+          <div class="pricing-per">forever</div>
+        </div>
+        <div class="pricing-divider"></div>
+        <ul class="pricing-features">
+          <li class="included">Unlimited autofill on any ATS</li>
+          <li class="included">Save profile: name, email, phone, location</li>
+          <li class="included">Resume file autofill</li>
+          <li class="included">Job description scraper</li>
+          <li class="not-included">AI cover letter generation</li>
+          <li class="not-included">Resume scoring</li>
+          <li class="not-included">AI resume insights</li>
+        </ul>
+        <button class="btn-tier">Add to Chrome — free →</button>
+      </div>
+      <!-- Pro -->
+      <div class="pricing-card featured">
+        <div class="pricing-badge">Most popular</div>
+        <div class="pricing-tier">Pro</div>
+        <div class="pricing-name">Pro</div>
+        <div class="pricing-desc">AI cover letters and resume scoring on every application.</div>
+        <div class="pricing-price">
+          <div class="pricing-amount">$9</div>
+          <div class="pricing-per">/month · billed annually</div>
+          <div class="pricing-note">$108/yr · or $19/mo month-to-month</div>
+        </div>
+        <div class="pricing-divider"></div>
+        <ul class="pricing-features">
+          <li class="included">Everything in Starter</li>
+          <li class="included">AI cover letter — 30/month</li>
+          <li class="included">Resume score vs job description</li>
+          <li class="included">Keyword gap analysis</li>
+          <li class="included">AI bullet rewrites — 50/month</li>
+          <li class="included">Job match scoring</li>
+          <li class="not-included">Unlimited AI requests</li>
+        </ul>
+        <button class="btn-tier featured">Get Pro →</button>
+      </div>
+      <!-- Premium -->
+      <div class="pricing-card">
+        <div class="pricing-tier">Power</div>
+        <div class="pricing-name">Premium</div>
+        <div class="pricing-desc">Unlimited AI. For the serious job seeker.</div>
+        <div class="pricing-price">
+          <div class="pricing-amount">$19</div>
+          <div class="pricing-per">/month · billed annually</div>
+          <div class="pricing-note">$228/yr · or $39/mo month-to-month</div>
+        </div>
+        <div class="pricing-divider"></div>
+        <ul class="pricing-features">
+          <li class="included">Everything in Pro</li>
+          <li class="included">Unlimited AI cover letters</li>
+          <li class="included">Unlimited bullet rewrites</li>
+          <li class="included">Unlimited resume scores</li>
+          <li class="included">Priority AI response speed</li>
+          <li class="included">Early access to new features</li>
+          <li class="included">Bring your own API key</li>
+        </ul>
+        <button class="btn-tier">Get Premium →</button>
+      </div>
+    </div>
+    <p class="pricing-footer">Start free, no card required. Paid plans cancel anytime — with a 7-day Premium trial on new Pro and Premium plans.</p>
+  </div>
+</section>
+
+<!-- ─── FAQ ────────────────────────────────────────── -->
+<section class="faq-section" id="faq">
+  <div class="container">
+    <div class="faq-header reveal">
+      <div class="section-label">Questions</div>
+      <h2>Answers, briefly.</h2>
+    </div>
+    <div class="faq-list reveal">
+      <div class="faq-item open">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          How is Rezme different from just using browser autofill?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">Browser autofill fills simple text inputs based on saved form history — it breaks on React-controlled inputs, custom dropdowns, location comboboxes, and file uploads. Rezme uses a purpose-built engine that understands how ATS forms are built: it handles shadow DOM, iframes, native-setter tricks for React, spatial heuristics for option menus, and DataTransfer-based resume attachment. It also writes AI cover letters and scores your resume — browser autofill can't do any of that.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Does it work on Workday? That's always the hard one.
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">Yes. Workday is notoriously hard because it renders forms inside iframes with custom web components and shadow DOM. Rezme's deepQuery engine traverses those boundaries, and the custom-dropdown handler opens Workday's ARIA comboboxes and clicks the right option by proximity — not just any matching option anywhere on the page.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Will the AI cover letter sound generic or AI-generated?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">The AI pulls specific signals from the job description — team name, stated challenges, tech stack, mission language — and matches them against specific details from your profile. The result is specific to the company and sounds like you wrote it, not a chatbot. That said, always read it before inserting — the AI occasionally invents details, and you know your story better than it does.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Is my profile data stored securely?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">Your profile data is stored in Chrome's local extension storage — it stays on your device. No profile data is ever sent to our servers. If you use AI features, the relevant job description and profile snippets are sent to Anthropic's API for completion only, and are not retained. You can bring your own Anthropic API key if you want full control.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Which ATS platforms does Rezme support?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">Rezme uses a universal heuristic engine — not per-ATS modules — so it works on any platform that renders standard HTML form elements, including Greenhouse, Lever, Workday, Ashby, SmartRecruiters, iCIMS, Workable, Taleo, BambooHR, JazzHR, Jobvite, Pinpoint, Breezy HR, Bullhorn, and many more. If a new ATS uses standard form patterns, Rezme fills it.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Can I cancel a paid plan anytime?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">Yes. Cancel anytime from your account settings with no cancellation fees. You keep Pro or Premium access until the end of your billing period.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── FOOTER ─────────────────────────────────────── -->
+<footer>
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <a href="#" class="nav-logo" style="font-size:18px">
+        <div class="nav-logo-icon" style="width:28px;height:28px;font-size:14px">⚡</div>
+        rezme
+      </a>
+      <p>The AI Chrome extension that autofills any job application in one click — on every ATS that exists.</p>
+      <div class="footer-social">
+        <!-- Instagram -->
+        <a href="#" aria-label="Instagram">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+        </a>
+        <!-- TikTok -->
+        <a href="#" aria-label="TikTok">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
+        </a>
+        <!-- YouTube -->
+        <a href="#" aria-label="YouTube">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M23.495 6.205a3.007 3.007 0 0 0-2.088-2.088c-1.87-.501-9.396-.501-9.396-.501s-7.507-.01-9.396.501A3.007 3.007 0 0 0 .527 6.205a31.247 31.247 0 0 0-.522 5.805 31.247 31.247 0 0 0 .522 5.783 3.007 3.007 0 0 0 2.088 2.088c1.868.502 9.396.502 9.396.502s7.506 0 9.396-.502a3.007 3.007 0 0 0 2.088-2.088 31.247 31.247 0 0 0 .5-5.783 31.247 31.247 0 0 0-.5-5.805zM9.609 15.601V8.408l6.264 3.602z"/></svg>
+        </a>
+      </div>
+    </div>
+    <div class="footer-col">
+      <h5>Product</h5>
+      <ul>
+        <li><a href="#how-it-works">How it works</a></li>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#pricing">Pricing</a></li>
+        <li><a href="#">Changelog</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h5>Resources</h5>
+      <ul>
+        <li><a href="#salaries">Salaries</a></li>
+        <li><a href="#templates">Templates</a></li>
+        <li><a href="#">Guides</a></li>
+        <li><a href="#">Blog</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h5>Legal</h5>
+      <ul>
+        <li><a href="#">Privacy</a></li>
+        <li><a href="#">Terms</a></li>
+        <li><a href="#">Contact</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2026 Rezme · Built for job seekers</span>
+    <div class="footer-status">
+      <span class="status-dot"></span>
+      All systems normal
+    </div>
+  </div>
+</footer>
+
+<!-- ─── JS ────────────────────────────────────────── -->
+<script>
+  // ── Scroll reveal ───────────────────────────────
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); } });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+  // ── Tab switching ────────────────────────────────
+  function switchTab(idx, btn) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + idx).classList.add('active');
+  }
+
+  // ── FAQ accordion ────────────────────────────────
+  function toggleFaq(btn) {
+    const item = btn.closest('.faq-item');
+    const wasOpen = item.classList.contains('open');
+    document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+    if (!wasOpen) item.classList.add('open');
+  }
+
+  // ── Animated fill demo ───────────────────────────
+  function animateFill(btn) {
+    btn.textContent = '⚡ Filling…';
+    setTimeout(() => { btn.textContent = '✓ All fields filled'; btn.style.background = 'rgba(34,197,94,0.3)'; btn.style.borderColor = 'rgba(34,197,94,0.5)'; }, 900);
+    setTimeout(() => { btn.textContent = '⚡ Autofill with Rezme'; btn.style.background = ''; btn.style.borderColor = ''; }, 3000);
+  }
+
+  // ── Nav active link on scroll ────────────────────
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('.nav-links a');
+  window.addEventListener('scroll', () => {
+    let current = '';
+    sections.forEach(s => { if (window.scrollY >= s.offsetTop - 80) current = s.id; });
+    navLinks.forEach(a => {
+      a.style.color = a.getAttribute('href') === '#' + current ? 'var(--text)' : '';
+    });
+  });
+
+  // ── The Loop stepper ─────────────────────────────
+  const loopSteps = [
+    {
+      num: '01', title: 'Discover',
+      desc: 'Find roles that actually fit. Rezme reads your resume and surfaces jobs with the highest match scores — so you spend time on applications worth sending.'
+    },
+    {
+      num: '02', title: 'Autofill',
+      desc: 'Fill any application in one click. Name, email, phone, resume, cover letter, every custom dropdown — across every ATS that exists.'
+    },
+    {
+      num: '03', title: 'Score',
+      desc: 'See your resume score before you hit submit. ATS readability, keyword gaps, impact bullets — fix it all before the recruiter sees it.'
+    },
+    {
+      num: '04', title: 'Interview Prep',
+      desc: 'Walk in knowing exactly what they\'ll ask. Role-specific questions generated from the job description, with STAR coaching anchored to your own resume.'
+    },
+    {
+      num: '05', title: 'Negotiate',
+      desc: 'Know your worth before the offer lands. Rezme pulls live salary data for your role and location, then scripts a counter-offer you can send word-for-word.'
+    }
+  ];
+  let loopIdx = 0;
+
+  function renderLoopStep(idx) {
+    const s = loopSteps[idx];
+    document.getElementById('loop-cur').textContent = s.num;
+    document.getElementById('loop-big-num').textContent = s.num;
+    document.getElementById('loop-title').textContent = s.title;
+    document.getElementById('loop-desc').textContent = s.desc;
+    document.querySelectorAll('.loop-step-dot').forEach((d, i) => d.classList.toggle('active', i === idx));
+    document.querySelectorAll('.loop-step-card').forEach((c, i) => c.classList.toggle('active', i === idx));
+    document.getElementById('loop-prev').disabled = idx === 0;
+    document.getElementById('loop-next').disabled = idx === loopSteps.length - 1;
+  }
+
+  function goToLoopStep(idx) {
+    loopIdx = idx;
+    renderLoopStep(idx);
+  }
+
+  function loopNav(dir) {
+    const next = loopIdx + dir;
+    if (next >= 0 && next < loopSteps.length) goToLoopStep(next);
+  }
+
+  // ── Animated stat counters ───────────────────────
+  function animateCounter(el, target, suffix, duration) {
+    const start = performance.now();
+    function step(now) {
+      const progress = Math.min((now - start) / duration, 1);
+      const ease = 1 - Math.pow(1 - progress, 3);
+      const cur = Math.round(ease * target);
+      el.innerHTML = cur + '<span>' + suffix + '</span>';
+      if (progress < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  const statObserver = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (!e.isIntersecting) return;
+      const el = e.target;
+      const txt = el.textContent.trim();
+      if (txt.startsWith('50')) animateCounter(el, 50, '+', 1600);
+      else if (txt.startsWith('2')) animateCounter(el, 2, 'min', 1200);
+      else if (txt.startsWith('3')) animateCounter(el, 3, '×', 1000);
+      statObserver.unobserve(el);
+    });
+  }, { threshold: 0.5 });
+  document.querySelectorAll('.stat-num').forEach(el => statObserver.observe(el));
+</script>
+</body>
+</html>
